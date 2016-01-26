@@ -36,8 +36,6 @@ def _RelativeOutputPath(path, include):
 
   return path[len(PACKAGE_NAME)+1:]
 
-
-
 def _proto_gen_impl(ctx):
   """General implementation for generating protos"""
   srcs = ctx.files.srcs
@@ -171,37 +169,6 @@ def cc_proto_library(
       includes=includes,
       **kargs)
 
-
-def internal_copied_filegroup(
-        name,
-        srcs,
-        include,
-        **kargs):
-  """Bazel rule to fix sources file to workaround with python path issues.
-
-  Args:
-    name: the name of the internal_copied_filegroup rule, which will be the
-        name of the generated filegroup.
-    srcs: the source files to be copied.
-    include: the expected import root of the source.
-    **kargs: extra arguments that will be passed into the filegroup.
-  """
-  outs = [_RelativeOutputPath(s, include) for s in srcs]
-
-  native.genrule(
-      name=name+"_genrule",
-      srcs=srcs,
-      outs=outs,
-      cmd=" && ".join(["cp $(location %s) $(location %s)" %
-                       (s, _RelativeOutputPath(s, include))
-                       for s in srcs]))
-
-  native.filegroup(
-      name=name,
-      srcs=outs,
-      **kargs)
-
-
 def py_proto_library(
         name,
         srcs=[],
@@ -263,10 +230,11 @@ def py_proto_library(
     py_libs += [default_runtime]
 
   native.py_library(
-      name=name,
-      srcs=outs+py_extra_srcs,
-      deps=py_libs+deps,
-      **kargs)
+      name = name,
+      srcs = outs + py_extra_srcs,
+      deps = py_libs + deps,
+      **kargs
+  )
 
 def internal_protobuf_py_tests(
     name,

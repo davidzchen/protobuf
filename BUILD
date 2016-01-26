@@ -22,7 +22,6 @@ load(
     "protobuf",
     "cc_proto_library",
     "py_proto_library",
-    "internal_copied_filegroup",
     "internal_protobuf_py_tests",
 )
 
@@ -484,26 +483,8 @@ java_library(
 # Python support
 ################################################################################
 
-# Hack:
-# protoc generated files contain imports like:
-#   "from google.protobuf.xxx import yyy"
-# However, the sources files of the python runtime are not directly under
-# "google/protobuf" (they are under python/google/protobuf).  We workaround
-# this by copying runtime source files into the desired location to workaround
-# the import issue. Ideally py_library should support something similiar to the
-# "include" attribute in cc_library to inject the PYTHON_PATH for all libraries
-# that depend on the target.
-#
-# If you use python protobuf as a third_party library in your bazel managed
-# project:
-# 1) Please import the whole package to //google/protobuf in your
-# project. Otherwise, bazel disallows generated files out of the current
-# package, thus we won't be able to copy protobuf runtime files into
-# //google/protobuf/.
-# 2) The runtime also requires "six" for Python2/3 compatibility, please see the
-# WORKSPACE file and bind "six" to your workspace as well.
-internal_copied_filegroup(
-    name = "python_srcs",
+py_library(
+    name = "python_proto_lib",
     srcs = glob(
         [
             "python/google/protobuf/*.py",
@@ -514,7 +495,7 @@ internal_copied_filegroup(
             "python/google/protobuf/internal/test_util.py",
         ],
     ),
-    include = "python",
+    imports = ["python"],
 )
 
 cc_binary(
@@ -574,21 +555,12 @@ py_proto_library(
     }),
     default_runtime = "",
     protoc = ":protoc",
-    py_extra_srcs = [":python_srcs"],
-    py_libs = ["//external:six"],
+    py_libs = [
+        ":python_proto_lib",
+        "//external:six"
+    ],
     srcs_version = "PY2AND3",
     visibility = ["//visibility:public"],
-)
-
-internal_copied_filegroup(
-    name = "python_test_srcs",
-    srcs = glob(
-        [
-            "python/google/protobuf/internal/*_test.py",
-            "python/google/protobuf/internal/test_util.py",
-        ],
-    ),
-    include = "python",
 )
 
 py_proto_library(
@@ -614,13 +586,19 @@ py_proto_library(
 
 py_library(
     name = "python_tests",
-    srcs = [":python_test_srcs"],
+    srcs = glob(
+        [
+            "python/google/protobuf/internal/*_test.py",
+            "python/google/protobuf/internal/test_util.py",
+        ],
+    ),
     srcs_version = "PY2AND3",
     deps = [
         ":protobuf_python",
         ":python_common_test_protos",
         ":python_specific_test_protos",
     ],
+    imports = ["python"],
 )
 
 internal_protobuf_py_tests(
