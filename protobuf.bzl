@@ -169,6 +169,34 @@ def cc_proto_library(
       includes=includes,
       **kargs)
 
+def internal_copied_filegroup(
+        name,
+        srcs,
+        include,
+        **kargs):
+  """Bazel rule to fix sources file to workaround with python path issues.
+  Args:
+    name: the name of the internal_copied_filegroup rule, which will be the
+        name of the generated filegroup.
+    srcs: the source files to be copied.
+    include: the expected import root of the source.
+    **kargs: extra arguments that will be passed into the filegroup.
+  """
+  outs = [_RelativeOutputPath(s, include) for s in srcs]
+
+  native.genrule(
+      name=name+"_genrule",
+      srcs=srcs,
+      outs=outs,
+      cmd=" && ".join(["cp $(location %s) $(location %s)" %
+                       (s, _RelativeOutputPath(s, include))
+                       for s in srcs]))
+
+  native.filegroup(
+      name=name,
+      srcs=outs,
+      **kargs)
+
 def py_proto_library(
         name,
         srcs=[],
